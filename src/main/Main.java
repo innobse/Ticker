@@ -13,8 +13,9 @@ import java.util.Random;
  */
 
 public class Main {
-    static final int COUNT_NUM = 100;                        //  сколько чисел генерировать
+    static final int COUNT_NUM = 7;                               //  сколько чисел генерировать
     static HashSet<Integer> nums = new HashSet<Integer>(COUNT_NUM); //  хранилище уникальных чисел
+    public static volatile boolean stop = false;
 
     public static void main(String[] args) {
         System.out.println("Старт программы");
@@ -22,7 +23,6 @@ public class Main {
         Generator generator = new Generator();
         try {
             generator.join();
-            messager.cancel();
             messager.join();
             System.out.println("Все потоки завершены");
         } catch (InterruptedException e) {
@@ -34,7 +34,6 @@ public class Main {
 }
 
 class Generator extends Thread {
-    private volatile boolean stop;              //  флаг остановки
     private static final int TICK = 1000;       //  один тик в ms
     private Random rand;
 
@@ -50,10 +49,10 @@ class Generator extends Thread {
 
     @Override
     public void run(){
-        while(!stop && (Main.nums.size() < Main.COUNT_NUM)){
+        while(!Main.stop && (Main.nums.size() < Main.COUNT_NUM)){
             synchronized(Main.nums){
                 Main.nums.add(rand.nextInt(Main.COUNT_NUM));
-                Main.nums.notify();
+                Main.nums.notifyAll();
             }
             try {
                 Thread.sleep(TICK);
@@ -62,18 +61,16 @@ class Generator extends Thread {
                 e.printStackTrace();
             }
         }
-    }
-
-    public void cancel(){
-        stop = true;
+        Main.stop = true;
+        synchronized (Main.nums){
+            Main.nums.notifyAll();
+        }
     }
 }
 
 class Messager extends Thread {
-    private volatile boolean stop;              //  флаг остановки
     private int count = 0;                      //  счетчик уведомлений генератора
-    private int iter = 0;                       //  Число N, где справедливо: печатать раз в N секунд
-    private final int MAX_WAIT = 2000;          //  Сколько максимум ждать генератора
+    private final int iter;                     //  Число N, где справедливо: печатать раз в N секунд
 
     Messager(){
         this(5);
@@ -86,10 +83,10 @@ class Messager extends Thread {
 
     @Override
     public void run(){
-        while(!stop){
+        while(!Main.stop){
             synchronized(Main.nums){
                 try {
-                    Main.nums.wait(MAX_WAIT);
+                    Main.nums.wait();
                     if (++count % iter == 0){
                         print();
                     }
@@ -101,10 +98,6 @@ class Messager extends Thread {
         }
         System.out.println("\nИТОГО:");
         print();
-    }
-
-    void cancel(){
-        stop = true;
     }
 
     private void print(){
