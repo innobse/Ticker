@@ -13,7 +13,7 @@ import java.util.Random;
  */
 
 public class Main {
-    static final int COUNT_NUM = 7;                               //  сколько чисел генерировать
+    static final int COUNT_NUM = 100;                               //  сколько чисел генерировать
     static HashSet<Integer> nums = new HashSet<Integer>(COUNT_NUM); //  хранилище уникальных чисел
     public static volatile boolean stop = false;
 
